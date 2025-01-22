@@ -28,7 +28,7 @@ public class UserService : IUserService
         if (_context.Users.Any(u => u.Username == user.Username || u.Email == user.Email))
             return false;
 
-        // Генерация хеша пароля (можно использовать Identity или стороннюю библиотеку)
+        // Генерация хеша пароля 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
 
         _context.Users.Add(user);

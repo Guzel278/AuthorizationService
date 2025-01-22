@@ -20,6 +20,18 @@ namespace AuthorizationService.Domain.Models
         public ICollection<Token> Tokens { get; set; } = new List<Token>();
         public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
         public ICollection<OTP> OTPs { get; set; } = new List<OTP>();
+
+        // Primary constructor
+        public User(string username, string email, string phoneNumber, int roleId)
+        {
+            Username = username;
+            Email = email;
+            PhoneNumber = phoneNumber;
+            RoleId = roleId;          
+        }
+
+        // Для EF Core требуется пустой конструктор
+        protected User() { }
     }
 }
 

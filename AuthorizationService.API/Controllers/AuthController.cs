@@ -1,6 +1,7 @@
 ﻿using AuthorizationService.API.Requests;
 using AuthorizationService.Application.Interfaces;
 using AuthorizationService.Domain.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthorizationService.API.Controllers
@@ -21,7 +22,7 @@ namespace AuthorizationService.API.Controllers
         {
 
             if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
-                return BadRequest("Invalid role specified.");
+                return NotFound(new { error = $"Role '{request.Role}' does not exist." });
 
             // Преобразуем enum в ID роли
             int roleId = (int)role;
@@ -29,23 +30,17 @@ namespace AuthorizationService.API.Controllers
             // Проверяем, существует ли роль в базе данных
             var roleExist = await _userService.GetRoleByIdAsync(roleId);
             if (roleExist == null)
-                return BadRequest($"Role '{request.Role}' does not exist.");
+                return NotFound(new { error = $"Role '{request.Role}' does not exist." });
 
             // Создаём нового пользователя
-            var user = new User
-            {
-                Username = request.Username,
-                Email = request.Email,
-                PhoneNumber = request.PhoneNumber,
-                RoleId = roleId
-            };
+            var user = new User(request.Username, request.Email, request.Email, roleId);
 
             var result = await _userService.RegisterUserAsync(user, request.Password);
 
             if (!result)
-                return BadRequest("User already exists.");
+                return Conflict(new { error = "User already exists." });
 
-            return Ok("User registered successfully.");
+            return CreatedAtAction(nameof(Register), new { userId = user.Id }, new { userId = user.Id });
         }
 
         [HttpPost("login")]
@@ -54,11 +49,17 @@ namespace AuthorizationService.API.Controllers
             // Проверка пользователя
             var user = await _userService.ValidateUserAsync(request.Username, request.Password);
             if (user == null)
-                return Unauthorized();
+                return Unauthorized(new { error = "Invalid username or password." });
 
             // Генерация токена
             var token = _userService.GenerateJwtToken(user);
-            return Ok(new { Token = token });
+            return Ok(new
+            {
+                userId = user.Id,
+                username = user.Username,
+                role = user.Role.Name,
+                token
+            });
         }
     }
 }
