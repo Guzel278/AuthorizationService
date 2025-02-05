@@ -8,6 +8,9 @@ namespace AuthorizationService.Application.Interfaces
         Task<User?> ValidateUserAsync(string username, string password);
         string GenerateJwtToken(User user);
         Task<Role?> GetRoleByIdAsync(int roleId);
+        Task SaveUserTokenAsync(int userId, string token);
+        Task LogUserActionAsync(int userId, string action);
+        Task<bool> RevokeUserTokenAsync(string token);
     }
 }
 

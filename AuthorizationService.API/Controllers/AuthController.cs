@@ -53,6 +53,13 @@ namespace AuthorizationService.API.Controllers
 
             // Генерация токена
             var token = _userService.GenerateJwtToken(user);
+
+            // Сохранение токена в базе
+            await _userService.SaveUserTokenAsync(user.Id, token);
+
+            // Логирование в auditLogs
+            await _userService.LogUserActionAsync(user.Id, "User logged in");
+
             return Ok(new
             {
                 userId = user.Id,
@@ -61,6 +68,21 @@ namespace AuthorizationService.API.Controllers
                 token
             });
         }
+
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout([FromBody] LogoutRequest request)
+        {
+            var success = await _userService.RevokeUserTokenAsync(request.Token);
+            if (!success)
+                return BadRequest(new { error = "Invalid or expired token." });
+
+            await _userService.LogUserActionAsync(request.UserId, "User logged out");
+            return Ok(new
+            {
+                userId = request.UserId,
+                token = request.Token,
+                message = "Successfully logged out."
+            });
+        }
     }
 }
-
