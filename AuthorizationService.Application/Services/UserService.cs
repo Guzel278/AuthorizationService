@@ -7,6 +7,7 @@ using AuthorizationService.Infrastructure.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using static System.Net.WebRequestMethods;
 
 public class UserService : IUserService
 {
@@ -52,4 +53,61 @@ public class UserService : IUserService
         return await _context.Roles.FirstOrDefaultAsync(r => r.Id == roleId);
     }
 
+    public async Task SaveUserTokenAsync(int userId, string token)
+    {
+        var newToken = new Token
+        {
+            UserId = userId,
+            TokenValue = token,
+            Expiry = DateTime.UtcNow.AddHours(1),
+            IsRevoked = false,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.Tokens.Add(newToken);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task LogUserActionAsync(int userId, string action)
+    {
+        var log = new AuditLog
+        {
+            UserId = userId,
+            Action = action,
+            ActionTime = DateTime.UtcNow
+        };
+
+        _context.AuditLogs.Add(log);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<bool> RevokeUserTokenAsync(string token)
+    {
+        var existingToken = await _context.Tokens
+            .FirstOrDefaultAsync(t => t.TokenValue == token && !t.IsRevoked);
+
+        if (existingToken == null)
+            return false;
+
+        existingToken.IsRevoked = true;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<string> GenerateOtpAsync(int userId)
+    {
+        var otpCode = new Random().Next(100000, 999999).ToString();  // Генерация 6-значного кода
+        var otp = new OTP
+        {
+            Code = otpCode,
+            Expiry = DateTime.UtcNow.AddMinutes(5), // Код действует 5 минут
+            UserId = userId,
+            IsUsed = false
+        };
+
+        _context.OTPs.Add(otp);
+        await _context.SaveChangesAsync();
+
+        return otpCode;
+    }
 }
